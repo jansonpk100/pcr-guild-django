@@ -23,7 +23,7 @@ def login(request):
         user = auth.authenticate(username=username, password=password)
         if not user:
             # 验证失败 400
-            return HttpResponseBadRequest()
+            return HttpResponseBadRequest('Incorrect username or password.')
         auth.login(request, user)
         return HttpResponse()
     return HttpResponseNotFound()
@@ -38,11 +38,17 @@ def register(request):
             return HttpResponseBadRequest()
         username = query.get('username')
         password = query.get('password')
+        if len(username) < 4 or len(username) > 16:
+            # 用户名长度不正确 400
+            return HttpResponseBadRequest('The limit of the length of a username is 4~16')
+        if len(password) < 4 or len(password) > 16:
+            # 密码长度不正确 400
+            return HttpResponseBadRequest('The limit of the length of a password is 4~24')
         try:
             user = User.objects.create_user(username=username, password=password)
         except (IntegrityError, ValueError):
-            # 参数错误 400
-            return HttpResponseBadRequest()
+            # 用户已存在 400
+            return HttpResponseBadRequest('User already exists.')
         auth.login(request, user)
         return HttpResponse()
     return HttpResponseNotFound()
@@ -68,7 +74,7 @@ def set_password(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -77,11 +83,11 @@ def set_password(request):
         password = query.get('password')
         if not request.user.check_password(password):
             # 参数错误 400
-            return HttpResponseBadRequest()
+            return HttpResponseBadRequest('Incorrect password.')
         new_password = query.get('new_password')
-        if not new_password:
-            # 参数错误 400
-            return HttpResponseBadRequest()
+        if len(new_password) < 4 or len(new_password) > 16:
+            # 密码长度不正确 400
+            return HttpResponseBadRequest('The limit of the length of a password is 4 ~ 24')
         request.user.set_password(new_password)
         request.user.save()
         return HttpResponse()
@@ -101,10 +107,10 @@ def remove(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         if not (request.user.is_superuser or request.user.is_staff):
             # 权限不足 403
-            return HttpResponseForbidden()
+            return HttpResponseForbidden('No permission.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -114,14 +120,14 @@ def remove(request):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            # 参数错误 400
-            return HttpResponseBadRequest()
+            # 用户不存在 400
+            return HttpResponseBadRequest('User does not exist.')
         if user.is_superuser:
             # 权限不足 403
-            return HttpResponseForbidden()
+            return HttpResponseForbidden('Unauthorized.')
         if user.is_staff and not request.user.is_superuser:
             # 权限不足 403
-            return HttpResponseForbidden()
+            return HttpResponseForbidden('Unauthorized.')
         user.delete()
         return HttpResponse()
     return HttpResponseNotFound()
@@ -140,10 +146,10 @@ def set_staff(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         if not request.user.is_superuser:
             # 权限不足 403
-            return HttpResponseForbidden()
+            return HttpResponseForbidden('No permission.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -153,8 +159,8 @@ def set_staff(request):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            # 参数错误 400
-            return HttpResponseBadRequest()
+            # 用户不存在 400
+            return HttpResponseBadRequest('User does not exist.')
         flag = query.get('flag')
         try:
             user.is_staff = flag
@@ -164,6 +170,7 @@ def set_staff(request):
             # 参数错误 400
             return HttpResponseBadRequest()
     return HttpResponseNotFound()
+
 
 def set_detail(request):
     """
@@ -178,7 +185,7 @@ def set_detail(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -213,7 +220,7 @@ def get_detail(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         return HttpResponse(json.dumps(request.user.detail))
     return HttpResponseNotFound()
 
@@ -239,7 +246,7 @@ def get_detail_all(request):
     if request.method in ('POST', 'GET'):
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         detail = [
             i.detail for i in User.objects.all()
         ]

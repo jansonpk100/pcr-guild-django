@@ -21,7 +21,7 @@ def character_add(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -29,8 +29,8 @@ def character_add(request):
             return HttpResponseBadRequest()
         c_id = query.get('id')
         if request.user.box.filter(c_id=c_id):
-            # 参数错误
-            return HttpResponseBadRequest()
+            # 人物已存在
+            return HttpResponseBadRequest('Character already exists.')
         Character.objects.create(c_id=c_id, rank=8, star=3, max=True, owner=request.user)
         return HttpResponse()
     return HttpResponseNotFound()
@@ -48,7 +48,7 @@ def character_remove(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -56,8 +56,8 @@ def character_remove(request):
             return HttpResponseBadRequest()
         c_id = query.get('id')
         if not Character.objects.filter(c_id=c_id):
-            # 参数错误
-            return HttpResponseBadRequest()
+            # 人物不存在错误
+            return HttpResponseBadRequest('Character does not exists.')
         request.user.box.filter(c_id=c_id).delete()
         return HttpResponse()
     return HttpResponseNotFound()
@@ -78,7 +78,7 @@ def character_edit(request):
     if request.method == 'POST':
         if not request.user.is_authenticated:
             # 未登录 401
-            return HttpUnauthorized()
+            return HttpUnauthorized('Unauthorized.')
         try:
             query = json.loads(request.body)
         except json.decoder.JSONDecodeError:
@@ -86,8 +86,8 @@ def character_edit(request):
             return HttpResponseBadRequest()
         c_id = query.get('id')
         if not Character.objects.filter(c_id=c_id):
-            # 参数错误 400
-            return HttpResponseBadRequest()
+            # 人物不存在 400
+            return HttpResponseBadRequest('Character does not exists.')
         rank = query.get('rank')
         star = query.get('star')
         maxx = query.get('max')
